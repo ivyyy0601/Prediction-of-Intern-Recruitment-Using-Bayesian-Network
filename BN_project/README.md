@@ -1,0 +1,20 @@
+3.1 Prediction of Intern Recruitment Using Bayesian Network
+Aim or future work:
+Inside our Network, the final goal is to calculate the probability that a candidate will enter
+a tech company to be an intern. This will be affected by both candidates’ yearn for the
+position and company’s willingness to the candidate, and also, some other factors of
+emergency.
+• Bayesian Network Construction.
+o The network structure was built based on recruitment logic and data assumptions.
+o There are 12 key nodes (such as education level, interview performance, and
+compensation), represented by a directed acyclic graph (DAG) to show causal
+relationships between them.
+• Inference Algorithms (Two algorithms)
+o Variable Elimination (VE): Used to iteratively eliminate irrelevant variables and
+calculate the posterior probability of the target variable.
+o Clique Tree Algorithm (Junction Tree): Efficiently infers joint probability distributions
+by constructing a tree structure.
+• User Interface (UI)
+o Designed an interactive interface where users can input relevant conditions (such as
+education level and interview performance) to see the predicted results. Users can also
+customize the Bayesian probabilities to observe how changes affect the outcomes.

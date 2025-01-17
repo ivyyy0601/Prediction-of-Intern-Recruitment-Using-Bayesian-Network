@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- 插入的图片 -->
+    <img id="header-image" src="./static/en_plot.jpg" alt="Header Image">
+    <title>贝叶斯网络</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <h1>贝叶斯网络示例</h1>
+    <div class="container">
+        <!-- SVG for the network visualization -->
+        <svg id="network"></svg>
+        <div id="legend" class="legend"></div>
+    </div>
+    <div id="tooltip" class="tooltip"></div>
+
+    <div class="query-container">
+        <h2>查询设置</h2>
+        <table id="query-table">
+            <thead>
+                <tr>
+                    <th>节点</th>
+                    <th>选择为查询目标</th>
+                    <th>选择为前提条件</th>
+                </tr>
+            </thead>
+            <tbody id="query-table-body">
+                <!-- Dynamically generated rows -->
+            </tbody>
+        </table>
+        <button id="submit-query">提交查询</button>
+    </div>
+
+    <script>
+        // Fetch Bayesian network data from the server
+        fetch('/get_network_data')
+            .then(response => response.json())
+            .then(data => {
+                renderNetwork(data); // Render the network visualization
+                renderQueryTable(data); // Populate the query table
+            });
+
+        // Function to render the network visualization
+        function renderNetwork(data) {
+            const width = 1000;
+            const height = 800;
+            const svg = d3.select("#network");
+            const tooltip = d3.select("#tooltip");
+            const legend = d3.select("#legend");
+
+            // Clear previous SVG content
+            svg.selectAll("*").remove();
+            legend.selectAll("*").remove();
+
+            // Define arrow markers for directed edges
+            svg.append("defs").append("marker")
+                .attr("id", "arrowhead")
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 15)
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-5L10,0L0,5")
+                .attr("fill", "#999");
+
+            // Initialize force simulation
+            const simulation = d3.forceSimulation(data.nodes)
+                .force("link", d3.forceLink(data.links).id(d => d.id).distance(150))
+                .force("charge", d3.forceManyBody().strength(-300))
+                .force("center", d3.forceCenter(width / 2, height / 2));
+
+            // Draw edges (links)
+            const link = svg.append("g")
+                .selectAll(".link")
+                .data(data.links)
+                .enter().append("line")
+                .attr("class", "link")
+                .attr("marker-end", "url(#arrowhead)");
+
+            // Draw nodes
+            const node = svg.append("g")
+                .selectAll(".node")
+                .data(data.nodes)
+                .enter().append("circle")
+                .attr("class", "node")
+                .attr("r", 20)
+                .style("fill", d => d.color)
+                .call(d3.drag()
+                    .on("start", dragstart)
+                    .on("drag", dragged)
+                    .on("end", dragend));
+
+            // Add tooltips and interaction handlers
+            node.on("mouseover", (event, d) => {
+                tooltip.style("display", "block")
+                    .html(`<strong>${d.id}</strong><br/>${d.info.label}<br/>当前概率: ${d.info.probability}`);
+            })
+            .on("mousemove", (event) => {
+                tooltip.style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY + 10) + "px");
+            })
+            .on("mouseout", () => {
+                tooltip.style("display", "none");
+            })
+            .on("click", (event, d) => {
+                const newProbability = prompt(`请输入新的概率 (节点: ${d.id}):`, d.info.probability);
+                if (newProbability !== null) {
+                    const probability = parseFloat(newProbability);
+                    if (!isNaN(probability) && probability >= 0 && probability <= 1) {
+                        updateProbability(d.id, probability);
+                    } else {
+                        alert("请输入介于 0 和 1 之间的数值！");
+                    }
+                }
+            });
+
+            // Populate legend with node information
+            data.nodes.forEach(d => {
+                legend.append("div")
+                    .style("color", d.color)
+                    .text(`${d.id}: ${d.info.label}`);
+            });
+
+            // Update positions during simulation ticks
+            simulation.on("tick", () => {
+                link.attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+
+                node.attr("cx", d => d.x)
+                    .attr("cy", d => d.y);
+            });
+
+            // Dragging event handlers
+            function dragstart(event) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                event.subject.fx = event.subject.x;
+                event.subject.fy = event.subject.y;
+            }
+
+            function dragged(event) {
+                event.subject.fx = event.x;
+                event.subject.fy = event.y;
+            }
+
+            function dragend(event) {
+                if (!event.active) simulation.alphaTarget(0);
+                event.subject.fx = null;
+                event.subject.fy = null;
+            }
+        }
+
+        // Render the query table for selecting nodes
+        function renderQueryTable(data) {
+            const tableBody = d3.select("#query-table-body");
+
+            // Populate table rows with node data
+            tableBody.selectAll("tr").data(data.nodes).enter()
+                .append("tr")
+                .html(d => `
+                    <td>${d.info.label}</td>
+                    <td><input type="checkbox" class="query-checkbox-target" data-id="${d.id}"></td>
+                    <td><input type="checkbox" class="query-checkbox-condition" data-id="${d.id}"></td>
+                `);
+        }
+
+        // Submit the query based on selected nodes
+        document.getElementById("submit-query").addEventListener("click", () => {
+            const queryTargets = [];
+            const queryConditions = [];
+
+            // Collect selected query targets
+            document.querySelectorAll('.query-checkbox-target:checked').forEach(checkbox => {
+                queryTargets.push(checkbox.dataset.id);
+            });
+
+            // Collect selected query conditions
+            document.querySelectorAll('.query-checkbox-condition:checked').forEach(checkbox => {
+                queryConditions.push(checkbox.dataset.id);
+            });
+
+            if (queryConditions.length === 0) {
+                alert("请至少选择一个前提条件！");
+                return;
+            }
+
+            // Send query data to the server
+            fetch('/query', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    query_targets: queryTargets,
+                    query_conditions: queryConditions
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                alert(`查询结果: ${JSON.stringify(result)}`);
+            });
+        });
+
+        // Update the probability of a node
+        function updateProbability(nodeId, probability) {
+            fetch('/update_probabilities', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ [nodeId]: probability })
+            })
+            .then(response => response.json())
+            .then(updatedData => {
+                renderNetwork(updatedData); // Re-render network with updated data
+                renderQueryTable(updatedData); // Update query table with new probabilities
+            });
+        }
+    </script>
+</body>
+</html>
