@@ -1,138 +1,153 @@
-# 📌 Prediction of Intern Recruitment Using Bayesian Networks
+# 📚 Character Relationship Network for Detective Fiction  
+A NLP + Graph Analysis project to uncover hidden relationships, plot structures, and character importance across multiple detective novels.
 
-This project builds a Bayesian Network to predict the probability that a candidate will receive an internship admission offer from a tech company. The system models relationships among key factors such as education level, interview performance, salary, and welfare, and performs inference using Variable Elimination and the Clique Tree (Junction Tree) Algorithm.
-
-## 🚀 1. Overview
-The goal of this project is to estimate:
-
-**P(Admission | candidate attributes, company preference, job conditions)**
-
-The Bayesian Network integrates both candidate-side factors (e.g., interest, major relevance) and company-side factors (e.g., offer decision, interview performance), forming a comprehensive prediction model for internship admission.
-
-## 🧱 2. Bayesian Network Construction
-
-### **2.1 Nodes (12 Variables)**
-The network includes 12 key factors:
-- Education Level  
-- Work Experience  
-- Age  
-- Interview Performance  
-- Company Offer  
-- Offer Accepted  
-- Major Related  
-- Working Hours  
-- Interest  
-- Salary  
-- Welfare  
-- Admission (target)
-
-### **2.2 Logic Behind the Network**
-- **Company Offer** is influenced by: Education Level, Interview Performance, Age, Work Experience  
-- **Offer Accepted** is influenced by: Salary, Welfare, Interest, Working Hours, Major Related  
-- **Admission** depends on both: Company Offer + Offer Accepted  
-
-The network is represented as a Directed Acyclic Graph (DAG) with conditional probability tables derived from a job description dataset and supplemental research data.
+This project uses **Named Entity Recognition**, **Sentiment Analysis**, **Co-occurrence Graphs**, and **PageRank** to automatically build **character relationship networks** from raw novel text.  
+It helps readers quickly understand plot progression, character evolution, and emotional tone.
 
 ---
 
-## 🔍 3. Inference Methods
-This project implements two exact inference algorithms:
-
-### **3.1 Variable Elimination (VE)**
-VE simplifies inference through:
-- Selecting a variable to eliminate  
-- Combining factors involving that variable  
-- Marginalizing (summing out)  
-- Repeating until only query variables remain  
-
-Two implementations:
-- pgmpy-based VE  
-- Custom VE (factor initialization, combination, marginalization, normalization)
-
-### **3.2 Clique Tree / Junction Tree Algorithm**
-Steps:
-1. Moralization & Triangulation  
-2. Convert DAG → Junction Tree  
-3. Message passing  
-4. Clique potential updates  
-5. Compute marginal/conditional probabilities  
-
-Suitable for dense networks with many dependencies.
+## ✨ Features
+- ✔ Automatic character extraction (spaCy NER)  
+- ✔ Sentence-level sentiment scoring (Afinn)  
+- ✔ Co-occurrence matrix computation  
+- ✔ Sentiment matrix with alignment rate  
+- ✔ Network graph visualization (NetworkX + Matplotlib)  
+- ✔ PageRank-based key character detection  
+- ✔ Multi-book batch processing  
+- ✔ High-resolution PNG graph outputs  
 
 ---
 
-## 🖥 4. User Interface (UI)
-The system includes a simple UI that allows users to:
-- Input conditions (e.g., “Master’s degree”, “Good interview performance”)  
-- View predicted admission probability  
-- Edit CPTs and observe changes  
+## 🧱 1. Project Workflow
 
----
-
-## 📊 5. Experimental Results
-
-### **5.1 Predictive Inference**
-- **Education**  
-  - Bachelor: 0.6149  
-  - Master: 0.6416  
-
-- **Age > 30**  
-  - Probability improves with work experience and stable working hours  
-
-- **Welfare**  
-  - Good: 0.5914  
-  - Average: 0.4086  
-
-- **Working Hours**  
-  - Best: 5–8 hours/day (0.4962)
-
-### **5.2 Diagnostic Inference**
-Used to understand:  
-- Factors driving acceptance/rejection  
-- “What-if” scenario analysis  
-
----
-
-## ⚖️ 6. Method Comparison
-
-| Method | Strength | Weakness | Best Use Case |
-|--------|----------|-----------|----------------|
-| Variable Elimination | Fast, simple | Not ideal for large, dense networks | Small/medium BN |
-| Clique Tree | Handles strong dependencies | Higher memory & computation | Large, complex BN |
-
----
-
-## 🧩 7. Conclusion
-Bayesian Networks provide:
-- Transparent causal reasoning  
-- Flexible simulation  
-- Evidence-based predictions  
-- Easy integration with UI  
-
-Future work may include automatic structure learning, additional datasets, and web deployment.
-
----
-
-## 🛠 8. How to Run
-
-### Install dependencies:
-```bash
-pip install pgmpy numpy pandas
-```
-
-### Run Bayesian Network:
+### **1️⃣ Read and preprocess novel text**
 ```python
-from pgmpy.inference import VariableElimination
-
-inference = VariableElimination(model)
-result = inference.query(
-    variables=["Admission"],
-    evidence={"Education": "Master", "Interview": "Good"}
-)
-print(result)
+novel = read_novel(file_path)
+sentence_list = sent_tokenize(novel)
 ```
 
-### Launch UI:
+### **2️⃣ Compute sentiment alignment rate**
+Ensures consistency across authors and writing styles.
+```python
+align_rate = calculate_align_rate(sentence_list)
+```
+
+### **3️⃣ Named Entity Recognition (NER)**
+Extracts all PERSON and ORG names, applies filtering & normalization.
+```python
+preliminary_names = iterative_NER(sentence_list)
+```
+
+### **4️⃣ Determine top characters via frequency**
+```python
+name_frequency, name_list = top_names(preliminary_names, novel, 25)
+```
+
+### **5️⃣ Compute matrices**
+```python
+co_matrix, sentiment_matrix = calculate_matrix(name_list, sentence_list, align_rate)
+```
+
+### **6️⃣ Visualize network graphs**
+```python
+plot_graph(name_list, name_frequency, co_matrix, 'co-occurrence', 'co-occurrence')
+plot_graph(name_list, name_frequency, sentiment_matrix, 'sentiment', 'sentiment')
+```
+
+### **7️⃣ PageRank ranking of characters**
+```python
+top_pr = top_names_with_pagerank(co_matrix, name_list, 5)
+print(top_pr)
+```
+
+---
+
+## 🔍 2. Key Algorithms
+
+### **Named Entity Recognition**
+- Based on spaCy `en_core_web_sm`
+- Splits multi-word names
+- Removes common English words
+- Removes tokens < 3 letters
+- Deduplicates and filters noise based on frequency threshold
+
+### **Sentiment Analysis**
+- Uses Afinn scoring  
+- Alignment rate adjusts sentiment skew  
+
+### **Matrices**
+- Co-occurrence = name occurrence × transpose  
+- Sentiment = co-occurrence × sentence sentiment  
+- Both triangularized & normalized
+
+### **PageRank**
+Ranks influence across the network graph using:
+```python
+nx.pagerank(G)
+```
+
+---
+
+## 📊 3. Outputs
+
+### ✔ Co-occurrence Network (PNG)  
+Shows intensity of shared sentences.
+
+### ✔ Sentiment Network (PNG)  
+Edge color = friendliness vs hostility  
+Node size = importance  
+
+### ✔ PageRank Top Characters  
+Example:
+```
+['sherlock', 'watson', 'poirot', 'hastings', 'villain']
+```
+
+---
+
+## 📁 4. Project Structure
+
+```
+📁 character-network/
+│── novels/
+│── graphs/
+│── common_words.txt
+│── main.py
+│── README.md
+```
+
+---
+
+## 🛠 5. Installation
+
+### Install dependencies
 ```bash
-python ui.py
+pip install spacy afinn nltk networkx matplotlib pandas numpy
 ```
+
+### Download spaCy model
+```bash
+python -m spacy download en_core_web_sm
+```
+
+---
+
+
+
+## 🌟 6. Future Improvements
+- Add coreference resolution (“he”, “she”, “I” → character names)  
+- Transformer-based sentiment model (BERT/RoBERTa)  
+- Interactive web graph (D3.js or PyVis)  
+- Chapter-wise dynamic relationship evolution  
+- Integration with text summarization model (T5 + PageRank)  
+
+---
+
+## 🎉 7. Summary
+This project provides a full pipeline for analyzing story structure through:
+- NLP  
+- Graph theory  
+- Sentiment modeling  
+- PageRank centrality  
+
+It is designed for detective fiction but can be applied to *any novel* with minimal changes.
