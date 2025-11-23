@@ -103,22 +103,10 @@ Example:
 ['sherlock', 'watson', 'poirot', 'hastings', 'villain']
 ```
 
----
-
-## 📁 4. Project Structure
-
-```
-📁 character-network/
-│── novels/
-│── graphs/
-│── common_words.txt
-│── main.py
-│── README.md
-```
 
 ---
 
-## 🛠 5. Installation
+## 🛠 4. Installation
 
 ### Install dependencies
 ```bash
@@ -132,7 +120,20 @@ python -m spacy download en_core_web_sm
 
 ---
 
+## 🚀 5. Run the Project
 
+```bash
+python main.py
+```
+
+This will automatically:
+1. Process all novels  
+2. Generate graphs  
+3. Compute matrices  
+4. Print PageRank  
+5. Save PNG results  
+
+---
 
 ## 🌟 6. Future Improvements
 - Add coreference resolution (“he”, “she”, “I” → character names)  
